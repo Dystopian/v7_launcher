@@ -1,0 +1,21 @@
+#@мод {требуемые;моды} [опции;dont_show;only_required;not_default;with:aaa,ddd,fff] описание
+
+ACE {@CBA_A3;@ACE3} [only_required] Advanced Combat Environment
+
+@ASR_AI3 {@CBA_A3} ASR AI
+
+@CustAdd {@CBA_A3} маленькие полезности, типа Push-to-Hear, ShackTac...
+
+@cz75_nochain_a3 [with:@CustAdd] отключить значок цепи
+@cyp_pushtohear_a3 [with:@CustAdd] по клавишам RWin и Menu приглушать звуки игры
+@stui [with:@CustAdd] ShackTac UI v7
+
+RHS {@rhs_afrf3;@rhs_usf3;@rhs_gref} [only_required] Red Hammer Studios
+@rhs_ace [with:@ACE3,@rhs_afrf3] RHS ACE3 compat
+@rhs_asrai3 [with:@ASR_AI3,@rhs_afrf3] RHS ASR AI compat
+
+@task_force_radio {@CBA_A3} Task Force Radio
+
+@cup_terrains_maps {@cup_terrains_core} [not_default] острова с A2
+
+@fsf_al_rayak {@cup_terrains_maps} [not_default] Al Rayak
