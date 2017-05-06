@@ -408,7 +408,10 @@
 				strEXE = "arma3" & strEXE & ".exe"
 			ElseIf fso.FileExists("arma3server.exe") Then
 				If Not headless.checked Then
-					strEXE = "arma3server" & strEXE & ".exe ""-profiles=profiles"" -config=server.cfg"
+					strEXE = "arma3server" & strEXE & ".exe ""-profiles=profiles"" -config=server.cfg -loadMissionToMemory"
+					If fso.FolderExists("servermod\addons") Then
+						strEXE = strEXE & " -servermod=servermod"
+					End If
 				Else
 					strEXE = "arma3server" & strEXE & ".exe ""-profiles=hcprofiles"" -client -connect=127.0.0.1 -password=" & password.value
 				End If
