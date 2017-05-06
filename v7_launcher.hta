@@ -439,7 +439,7 @@
 			idStartButton.Disabled = True
 			If "DAD" = WshShell.ExpandEnvironmentStrings("%ComputerName%") Then MsgBox "Звук переключи"
 			If "DEEP" = WshShell.ExpandEnvironmentStrings("%ComputerName%") Then
-				If 1 = GetHTMLValue("x64") And fso.FileExists(cacheFilePath & ModSum.value & "\a.dat") Then
+				If fso.FileExists(cacheFilePath & ModSum.value & "\a.dat") Then
 					If fso.GetFile(cacheFilePath & cacheFileName).DateLastModified <> fso.GetFile(cacheFilePath & ModSum.value & "\a.dat").DateLastModified Then
 						fso.CopyFile cacheFilePath & ModSum.value & "\a.dat", cacheFilePath & cacheFileName, True
 					End If
