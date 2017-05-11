@@ -361,44 +361,6 @@
 			' параметры для команды start
 			StartPriorities = Array("low","belownormal","normal","abovenormal","high")
 
-'			i = "userconfig\.vars.ArmA2OAProfile"
-'			If fso.FileExists(i) Then
-'				s = ""
-'				On Error Resume Next
-'				s = WshShell.RegRead("HKCU\Software\Bohemia Interactive Studio\ArmA 2 OA\Player Name")
-'				On Error Goto 0
-'				If "" <> s Then
-'					If     fso.FileExists(WshShell.SpecialFolders("MyDocuments") & "\ArmA 2\" & s & ".ArmA2OAProfile") Then
-'						s = WshShell.SpecialFolders("MyDocuments") & "\ArmA 2\" & s & ".vars.ArmA2OAProfile"
-'					ElseIf fso.FileExists(WshShell.SpecialFolders("MyDocuments") & "\ArmA 2 Other Profiles\" & s & "\" & s & ".ArmA2OAProfile") Then
-'						s = WshShell.SpecialFolders("MyDocuments") & "\ArmA 2 Other Profiles\" & s & "\" & s & ".vars.ArmA2OAProfile"
-'					End If
-'				ElseIf fso.FolderExists(WshShell.SpecialFolders("MyDocuments") & "\ArmA 2") Then
-'					For Each f in fso.GetFolder(WshShell.SpecialFolders("MyDocuments") & "\ArmA 2").Files
-'						If InStr(2, f.Name, ".ArmA2OAProfile", 1) And 0 = InStr(1 ,f.Name, ".vars.ArmA2OAProfile", 1) Then
-'							s = Replace(f.Name, ".ArmA2OAProfile", "")
-'							s = WshShell.SpecialFolders("MyDocuments") & "\ArmA 2\" & s & ".vars.ArmA2OAProfile"
-'							Exit For
-'						End If
-'					Next
-'				End If
-'				If InStr(s,"\") Then
-'					If Not fso.FileExists(s) Then
-'						fso.CopyFile i, s
-'					ElseIf fso.GetFile(s).Size < fso.GetFile(i).Size Then
-'						fso.CopyFile i, s
-'					End If
-'				Else
-'					msgbox "Profile not found, ACE settings not saved"
-'				End If
-'			End If
-'
-'			If Not Checked.Exists("Beta") Then
-'				strEXE = "arma2oa.exe"
-'			Else
-'				strEXE = "Expansion\beta\arma2oa.exe"
-'			End If
-
 			If 0 = GetHTMLValue("x64") Then
 				strEXE = ""
 			Else
@@ -426,7 +388,6 @@
 			' сначала пройдемся по всем отмеченным модам
 			For Each i In M.Keys
 				If Checked.Exists(i) Then AddModAndDepsToString(i)
-				'i = "@ASR_AI3" Or 
 				If ( i = "@pooter_enhanced_asr_ai" Or i = "@Vcom_AI" ) And Checked.Exists(i) Then strEXE = strEXE & " -filePatching"
 			Next
 			' потом по модам с опцией with:
