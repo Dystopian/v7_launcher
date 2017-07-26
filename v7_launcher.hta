@@ -64,6 +64,7 @@
 		oldModSum = ""
 
 		DBFILE = "descript.ion"
+		GoToScriptDirectory
 		If "v7" <> fso.GetFileName(WshShell.CurrentDirectory) Then
 			subFolderMode = False
 			modPrefix = ""
@@ -647,12 +648,17 @@
 
 	Sub UpdateOnClick
 		' при нажатии кнопки "Update"
+		GoToScriptDirectory
+		WshShell.CurrentDirectory = WshShell.CurrentDirectory & "\cwRsync\"
+		WshShell.Run """" & "Download_from_inet.cmd" & """", , True
+	End Sub
+
+	Sub GoToScriptDirectory
+		' меняет текущий каталог на каталог, где лежит скрипт
 		Dim path
 		path = document.location.href
 		path = fso.GetParentFolderName(UnEscape(Replace(Right(path, Len(path) - 8), "/", "\")))
-		path = path & "\cwRsync\"
 		WshShell.CurrentDirectory = path
-		WshShell.Run """" & "Download_from_inet.cmd" & """", , True
 	End Sub
 </SCRIPT>
 
