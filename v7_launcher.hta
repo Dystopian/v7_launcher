@@ -32,6 +32,11 @@
 	Dim cacheFilePath ' путь к файлу с AnimDataCache и имя файла
 	Const cacheFileName = "6ff2c91729fc5490b726322f1f9577f672b80002.dat"
 	Dim cacheTimer ' id таймера для сохранения AnimDataCache
+	Dim isServer ' = true если сервер
+	Dim HTTP_code, HTTP_last ' объект открытия страниц в инете, для запроса/отправки кода и проверки надо ли обновляться
+	Const URL_code_get = ""
+	Const URL_code_set = ""
+	Const URL_last_get = ""
 	Const AdminComputerName = "ADMIN"
 
 	Sub Window_onLoad
@@ -53,6 +58,8 @@
 		Set WshShell = CreateObject("WScript.Shell")
 		Set fso = CreateObject("Scripting.FileSystemObject")
 		Set regEx = New RegExp
+		Set HTTP_code = CreateObject("MSXML2.XMLHTTP.3.0")
+		Set HTTP_last = CreateObject("MSXML2.XMLHTTP.3.0")
 		isStarting = False
 		oldModSum = ""
 
@@ -69,10 +76,16 @@
 
 		password_desc.style.visibility = "hidden"
 		password.style.visibility = "hidden"
+
 		If fso.FileExists("arma3.exe") Then
-			headless_label.InnerHTML=""
-			password_desc.InnerHTML=""
-			password.size=1
+			isServer = False
+			headless_label.InnerHTML = ""
+			password_desc.InnerHTML = ""
+			password.size = 1
+		ElseIf fso.FileExists("arma3server.exe") Then
+			isServer = True
+		Else
+			isServer = ""
 		End If
 
 		optionsFile = WshShell.ExpandEnvironmentStrings("%APPDATA%") & "\v7ArmALauncher.ini"
@@ -187,15 +200,65 @@
 
 		For Each s In Options.Keys
 			Call SetHTMLValue(s,Options(s)(1))
-		Next 
+		Next
 		LoadOptions
 
 		cacheFilePath = WshShell.ExpandEnvironmentStrings("%LOCALAPPDATA%") & "\Arma 3\AnimDataCache\"
+
+		If "String" <> TypeName(isServer) And "" <> URL_code_get Then
+			If Not isServer Then
+				HTTP_code.open "GET", URL_code_get & fso.GetTempName
+				HTTP_code.onreadystatechange = GetRef("onreadyHTTP_code")
+				code_status.InnerHTML = "--"
+				code_status.title = "Code checking..."
+				HTTP_code.send
+			End If
+		End If
 
 		args = Split(v7_ArmA_LauncherID.commandLine)
 		If "start" = args(Ubound(args)) Then
 			Launch
 		End If
+
+		If "" <> URL_last_get Then
+			HTTP_last.open "GET", URL_last_get & fso.GetTempName
+			HTTP_last.onreadystatechange = GetRef("onreadyHTTP_last")
+			idUpdate.value = "Checking..."
+			HTTP_last.send
+		End If
+	End Sub
+
+	Sub onreadyHTTP_last
+		' вызывается, когда готов результат http-запроса штампа
+		If 4 <> HTTP_last.readyState Then Exit Sub
+		If 200 <> HTTP_last.status Then
+			idUpdate.value = "ERROR :("
+			idUpdate.title = "HTTP_last.status=" & HTTP_last.status
+			Exit Sub
+		End If
+		If fso.FileExists(modPrefix & "last") Then
+			If HTTP_last.responseText = fso.OpenTextFile(modPrefix & "last").ReadAll Then
+				idUpdate.value = "No updates :)"
+				idUpdate.title = "HTTP_last.responseText=" & Left(HTTP_last.responseText,30)
+				Exit Sub
+			End If
+		End If
+		UpdateBlink ' из-за косяка (см. ниже) здесь прямой вызов вместо setTimeout
+	End Sub
+
+	Sub UpdateBlink
+		' моргает кнопкой Update
+		' здесь какой-то косяк, в отличие от документации событие по setTimeout не повторяется бесконечно
+		Const str = "--> Update <--"
+		Dim time
+		If str <> idUpdate.value Then
+			idUpdate.value = str
+			time = 600
+		Else
+			idUpdate.value = "                           "
+			time = 300
+		End If
+		window.setTimeout "UpdateBlink", time, "VBScript"
 	End Sub
 
 	Function ModHasOption(mo,opt)
@@ -367,14 +430,19 @@
 			' параметры для команды start
 			StartPriorities = Array("low","belownormal","normal","abovenormal","high")
 
+			If "String" = TypeName(isServer) Then
+				msgbox "exe not found"
+				myQuit
+			End If
+
 			If 0 = GetHTMLValue("x64") Then
 				strEXE = ""
 			Else
 				strEXE = "_x64"
 			End If
-			If fso.FileExists("arma3.exe") Then
+			If Not isServer Then
 				strEXE = "arma3" & strEXE & ".exe"
-			ElseIf fso.FileExists("arma3server.exe") Then
+			Else
 				If headless.checked Then
 					strEXE = "arma3server" & strEXE & ".exe ""-profiles=hcprofiles"" -client -connect=127.0.0.1 -password=" & password.value
 				Else
@@ -382,10 +450,14 @@
 					If fso.FolderExists("servermod\addons") Then
 						strEXE = strEXE & " -servermod=servermod"
 					End If
+					If "" <> URL_code_set Then
+						HTTP_code.open "GET", URL_code_set & ModSum.value & "&rand=" & fso.GetTempName
+						HTTP_code.onreadystatechange = GetRef("onreadyHTTP_code")
+						code_status.InnerHTML = "--"
+						code_status.title = "Code " & ModSum.value & " uploading..."
+						HTTP_code.send
+					End If
 				End If
-			Else
-				msgbox "exe not found"
-				myQuit
 			End If
 			strEXE = strEXE & " -nosplash -world=empty -skipIntro -noPause"
 			strEXE = "cmd /c start """" /" & StartPriorities(2+CInt(GetHTMLValue("Priority"))) & " " & strEXE
@@ -430,6 +502,33 @@
 		ModSum.ReadOnly = False
 		idStartButton.Disabled = False
 		isStarting = False
+	End Sub
+
+	Sub onreadyHTTP_code
+		' вызывается, когда готов результат http-запроса штампа
+		If 4 <> HTTP_code.readyState Then Exit Sub
+		If 200 <> HTTP_code.status Then
+			code_status.InnerHTML = "ER"
+			code_status.title = "HTTP_code.status=" & HTTP_code.status
+			Exit Sub
+		End If
+		If isServer Then
+			If HTTP_code.responseText <> ModSum.value Then
+				code_status.InnerHTML = "ER"
+				code_status.title = "HTTP_code.responseText=" & Left(HTTP_code.responseText,30)
+				Exit Sub
+			End If
+			code_status.title = "Code " & ModSum.value & " uploaded"
+		Else
+			If "" = oldModSum Then
+				oldModSum = ModSum.value
+				idStartButton.Disabled = True
+			End If
+			ModSum.value = Left(HTTP_code.responseText,9)
+			code_status.title = "server code = " & ModSum.value
+			ModSum_Change
+		End If
+		code_status.InnerHTML = "OK"
 	End Sub
 
 	Sub OnKeyDown
@@ -490,7 +589,7 @@
 					If 0 <> GetHTMLValue(opt) Then ret = ret & " -" & opt & "=" & GetHTMLValue(opt)
 				End If
 			End If
-		Next 
+		Next
 		GetOptionsString = ret
 	End Function
 
@@ -501,7 +600,7 @@
 		f.WriteLine("[User]")
 		For Each opt In Options.Keys
 			f.WriteLine(opt & "=" & GetHTMLValue(opt))
-		Next 
+		Next
 		f.Close
 	End Sub
 
@@ -564,6 +663,7 @@
 	<span id="ModsTable" style="overflow: auto; width: 770px; height: 400;"></span>
 	<br><br>
 	<div align="center">
+		<span id="code_status"></span>
 		<input type="text" value="0" maxlength="8" size="15" id="ModSum" onKeyDown="ModSum_KeyDown">
 		<input type="button" value="Start game" id="idStartButton" onClick="Launch">
 		<label for="headless" id="headless_label"><input id="headless" type="checkbox" onClick="HeadlessOnClick">Headless Client</label>
