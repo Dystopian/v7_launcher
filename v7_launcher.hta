@@ -325,16 +325,15 @@
 
 	Sub ModSum_KeyDown
 		' запускаетс€ при нажатии любой клавиши в поле ввода суммы-кода модов
-		If window.event.Keycode <> 13 Then
-			If "" = oldModSum Then
-				' запомним старое значение
-				oldModSum = ModSum.value
-				idStartButton.Disabled = True
-			Else
-				window.clearTimeout(idTimer)
-			End If
-			idTimer = window.setTimeout( "ModSum_Change", 1000, "VBScript")
+		If 13 = window.event.Keycode Then Exit Sub
+		If "" = oldModSum Then
+			' запомним старое значение
+			oldModSum = ModSum.value
+			idStartButton.Disabled = True
+		Else
+			window.clearTimeout(idTimer)
 		End If
+		idTimer = window.setTimeout( "ModSum_Change", 1000, "VBScript")
 	End Sub
 
 	Sub ModSum_Change
@@ -364,10 +363,9 @@
 
 	Sub AddModToString(path)
 		' провер€ет, существует ли каталог мода, и добавл€ет его к строке модов
-		If Not IsModInList(strMods,path) Then
-			If Not fso.FolderExists(path) Then msgbox path & " added, but folder not found"
-			strMods = strMods & ";" & path
-		End If
+		If IsModInList(strMods,path) Then Exit Sub
+		If Not fso.FolderExists(path) Then msgbox path & " added, but folder not found"
+		strMods = strMods & ";" & path
 	End Sub
 
 	Sub AddModAndDepsToString(mo)
@@ -376,13 +374,13 @@
 		If Not M.Exists(mo) Then
 			' если мода в базе нет, просто добавим его
 			AddModToString(modPrefix & mo)
-		Else
-			' если мод в базе, вызовем рекурсию дл€ всех зависимостей и добавим его самого
-			For Each dep In Split(Deps(mo),";")
-				AddModAndDepsToString(dep)
-			Next
-			If Not ModHasOption(mo,"only_required") Then AddModToString(M(mo))
+			Exit Sub
 		End If
+		' если мод в базе, вызовем рекурсию дл€ всех зависимостей и добавим его самого
+		For Each dep In Split(Deps(mo),";")
+			AddModAndDepsToString(dep)
+		Next
+		If Not ModHasOption(mo,"only_required") Then AddModToString(M(mo))
 	End Sub
 
 	Sub AddModsWith_with
@@ -424,76 +422,76 @@
 		' запускаетс€ при нажатии на кнопку запуска игры
 		If isStarting Then
 			msgbox "Already starting"
-		Else
-			isStarting = True
-			Dim s, i, StartPriorities
-			' параметры дл€ команды start
-			StartPriorities = Array("low","belownormal","normal","abovenormal","high")
-
-			If "String" = TypeName(isServer) Then
-				msgbox "exe not found"
-				myQuit
-			End If
-
-			If 0 = GetHTMLValue("x64") Then
-				strEXE = ""
-			Else
-				strEXE = "_x64"
-			End If
-			If Not isServer Then
-				strEXE = "arma3" & strEXE & ".exe"
-			Else
-				If headless.checked Then
-					strEXE = "arma3server" & strEXE & ".exe ""-profiles=hcprofiles"" -client -connect=127.0.0.1 -password=" & password.value
-				Else
-					strEXE = "arma3server" & strEXE & ".exe ""-profiles=profiles"" -config=server.cfg -loadMissionToMemory"
-					If fso.FolderExists("servermod\addons") Then
-						strEXE = strEXE & " -servermod=servermod"
-					End If
-					If "" <> URL_code_set Then
-						HTTP_code.open "GET", URL_code_set & ModSum.value & "&rand=" & fso.GetTempName
-						HTTP_code.onreadystatechange = GetRef("onreadyHTTP_code")
-						code_status.InnerHTML = "--"
-						code_status.title = "Code " & ModSum.value & " uploading..."
-						HTTP_code.send
-					End If
-				End If
-			End If
-			strEXE = strEXE & " -nosplash -world=empty -skipIntro -noPause"
-			strEXE = "cmd /c start """" /" & StartPriorities(2+CInt(GetHTMLValue("Priority"))) & " " & strEXE
-			strMods = ""
-			If fso.FolderExists("R:\@_RAM") Then strMods = ";" & "R:\@_RAM" & strMods
-			' сначала пройдемс€ по всем отмеченным модам
-			For Each i In M.Keys
-				If Checked.Exists(i) Then AddModAndDepsToString(i)
-				If ( i = "@pooter_enhanced_asr_ai" Or i = "@Vcom_AI" ) And Checked.Exists(i) Then strEXE = strEXE & " -filePatching"
-			Next
-			' потом по модам с опцией with:
-			AddModsWith_with
-			strEXE = strEXE & GetOptionsString
-			' моды в кавычки на случай пробелов
-			If ";" = Left(strMods,1) Then strMods = " ""-mod=" & Mid(strMods,2) & """"
-
-			ModSum.ReadOnly = True
-			idStartButton.Disabled = True
-			If "DAD" = WshShell.ExpandEnvironmentStrings("%ComputerName%") Then MsgBox "«вук переключи"
-			If "DEEP" = WshShell.ExpandEnvironmentStrings("%ComputerName%") Then
-				If fso.FileExists(cacheFilePath & ModSum.value & "\a.dat") Then
-					If fso.GetFile(cacheFilePath & cacheFileName).DateLastModified <> fso.GetFile(cacheFilePath & ModSum.value & "\a.dat").DateLastModified Then
-						fso.CopyFile cacheFilePath & ModSum.value & "\a.dat", cacheFilePath & cacheFileName, True
-					End If
-				End If
-				window.clearTimeout(cacheTimer)
-				cacheTimer = window.setTimeout( "CheckCache", 3*60*1000, "VBScript")
-			End If
-			If "" <> GetHTMLValue("startBefore") Then WshShell.Run GetHTMLValue("startBefore"), , True
-			'msgbox strEXE & strMods
-			'If subFolderMode Then msgbox strMods
-			WshShell.Run strEXE & strMods, , True
-			idTimer = window.setTimeout( "Launch_finished", 10000, "VBScript")
-			'Launch_finished
-			'myQuit
+			Exit Sub
 		End If
+		isStarting = True
+		Dim s, i, StartPriorities
+		' параметры дл€ команды start
+		StartPriorities = Array("low","belownormal","normal","abovenormal","high")
+
+		If "String" = TypeName(isServer) Then
+			msgbox "exe not found"
+			myQuit
+		End If
+
+		If 0 = GetHTMLValue("x64") Then
+			strEXE = ""
+		Else
+			strEXE = "_x64"
+		End If
+		If Not isServer Then
+			strEXE = "arma3" & strEXE & ".exe"
+		Else
+			If headless.checked Then
+				strEXE = "arma3server" & strEXE & ".exe ""-profiles=hcprofiles"" -client -connect=127.0.0.1 -password=" & password.value
+			Else
+				strEXE = "arma3server" & strEXE & ".exe ""-profiles=profiles"" -config=server.cfg -loadMissionToMemory"
+				If fso.FolderExists("servermod\addons") Then
+					strEXE = strEXE & " -servermod=servermod"
+				End If
+				If "" <> URL_code_set Then
+					HTTP_code.open "GET", URL_code_set & ModSum.value & "&rand=" & fso.GetTempName
+					HTTP_code.onreadystatechange = GetRef("onreadyHTTP_code")
+					code_status.InnerHTML = "--"
+					code_status.title = "Code " & ModSum.value & " uploading..."
+					HTTP_code.send
+				End If
+			End If
+		End If
+		strEXE = strEXE & " -nosplash -world=empty -skipIntro -noPause"
+		strEXE = "cmd /c start """" /" & StartPriorities(2+CInt(GetHTMLValue("Priority"))) & " " & strEXE
+		strMods = ""
+		If fso.FolderExists("R:\@_RAM") Then strMods = ";" & "R:\@_RAM" & strMods
+		' сначала пройдемс€ по всем отмеченным модам
+		For Each i In M.Keys
+			If Checked.Exists(i) Then AddModAndDepsToString(i)
+			If ( i = "@pooter_enhanced_asr_ai" Or i = "@Vcom_AI" ) And Checked.Exists(i) Then strEXE = strEXE & " -filePatching"
+		Next
+		' потом по модам с опцией with:
+		AddModsWith_with
+		strEXE = strEXE & GetOptionsString
+		' моды в кавычки на случай пробелов
+		If ";" = Left(strMods,1) Then strMods = " ""-mod=" & Mid(strMods,2) & """"
+
+		ModSum.ReadOnly = True
+		idStartButton.Disabled = True
+		If "DAD" = WshShell.ExpandEnvironmentStrings("%ComputerName%") Then MsgBox "«вук переключи"
+		If "DEEP" = WshShell.ExpandEnvironmentStrings("%ComputerName%") Then
+			If fso.FileExists(cacheFilePath & ModSum.value & "\a.dat") Then
+				If fso.GetFile(cacheFilePath & cacheFileName).DateLastModified <> fso.GetFile(cacheFilePath & ModSum.value & "\a.dat").DateLastModified Then
+					fso.CopyFile cacheFilePath & ModSum.value & "\a.dat", cacheFilePath & cacheFileName, True
+				End If
+			End If
+			window.clearTimeout(cacheTimer)
+			cacheTimer = window.setTimeout( "CheckCache", 3*60*1000, "VBScript")
+		End If
+		If "" <> GetHTMLValue("startBefore") Then WshShell.Run GetHTMLValue("startBefore"), , True
+		'msgbox strEXE & strMods
+		'If subFolderMode Then msgbox strMods
+		WshShell.Run strEXE & strMods, , True
+		idTimer = window.setTimeout( "Launch_finished", 10000, "VBScript")
+		'Launch_finished
+		'myQuit
 	End Sub
 
 	Sub Launch_finished
@@ -607,33 +605,32 @@
 	Sub LoadOptions
 		' загружает опции из файла
 		Dim s, a
-		If fso.FileExists(optionsFile) Then
-			Set f = fso.OpenTextFile(optionsFile)
-			Do Until f.AtEndOfStream
-				s = f.ReadLine
-				a = Split(s,"=")
-				If 1 = UBound(a) Then
-					If Options.Exists(a(0)) Then
-						regEx.Pattern = Options(a(0))(0)
-						If regEx.Test(a(1)) Then
-							Call SetHTMLValue(a(0),a(1))
-						Else
-							Call SetHTMLValue(a(0),Options(a(0))(1))
-						End If
+		If Not fso.FileExists(optionsFile) Then Exit Sub
+		Set f = fso.OpenTextFile(optionsFile)
+		Do Until f.AtEndOfStream
+			s = f.ReadLine
+			a = Split(s,"=")
+			If 1 = UBound(a) Then
+				If Options.Exists(a(0)) Then
+					regEx.Pattern = Options(a(0))(0)
+					If regEx.Test(a(1)) Then
+						Call SetHTMLValue(a(0),a(1))
+					Else
+						Call SetHTMLValue(a(0),Options(a(0))(1))
 					End If
 				End If
-			Loop
-			f.Close
-		End If
+			End If
+		Loop
+		f.Close
 	End Sub
 
 	Sub LoadOnClick
 		' при нажатии кнопки "«агрузить"
 		If Not fso.FileExists(optionsFile) Then
 			msgbox "save not found"
-		Else
-			LoadOptions
+			Exit Sub
 		End If
+		LoadOptions
 	End Sub
 
 	Sub HeadlessOnClick
