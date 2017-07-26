@@ -32,6 +32,7 @@
 	Dim cacheFilePath ' путь к файлу с AnimDataCache и имя файла
 	Const cacheFileName = "6ff2c91729fc5490b726322f1f9577f672b80002.dat"
 	Dim cacheTimer ' id таймера для сохранения AnimDataCache
+	Const AdminComputerName = "ADMIN"
 
 	Sub Window_onLoad
 		' start from TotalCmd with right mouse double click causes error on "window.resizeTo" if timeout ~< 60
@@ -163,6 +164,10 @@
 			End If
 		Next
 
+		If AdminComputerName = WshShell.ExpandEnvironmentStrings("%ComputerName%") Then
+			filePatching_label.style.visibility = "visible"
+		End If
+
 		Set Options = CreateObject("Scripting.Dictionary")
 		' значение: регулярка, дефолтное значение, является ли аргументом для arma
 		Options.Add "startBefore", Array(".*","",false)
@@ -178,6 +183,7 @@
 			s="0"
 		End If
 		Options.Add "x64", Array("[01]",s,false)
+		Options.Add "filePatching", Array("[01]","0",true)
 
 		For Each s In Options.Keys
 			Call SetHTMLValue(s,Options(s)(1))
@@ -613,6 +619,7 @@
 	</select>
 	<label for="showScriptErrors"><input id="showScriptErrors" type="checkbox">Show script errors</label>
 	<label for="nologs"><input id="nologs" type="checkbox">No logs</label>
+	<label for="filePatching" id="filePatching_label" style="visibility: hidden"><input id="filePatching" type="checkbox">FP</label>
 	<br /><br />
 	<input type="button" value="Save" onClick="SaveOnClick">
 	<input type="button" value="Load" onClick="LoadOnClick">
