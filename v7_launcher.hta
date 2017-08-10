@@ -19,8 +19,8 @@
 	' глобальные переменные
 	Dim DBFILE ' файл с описаниями модов
 	Dim optionsFile ' файл с настройками
-	Dim M,Deps,Opts,Desc,Visible,Checked ' БД модов
-	Dim WshShell,fso,f ' дескриптор файла
+	Dim M, Deps, Opts, Desc, Visible, Checked ' БД модов
+	Dim WshShell, fso, f ' дескриптор файла
 	Dim strEXE, strMods ' строки запуска гамы
 	Dim regEx ' регулярка, которой будем проверять че-нибудь
 	Dim isStarting ' пока идет старт игры, = true
@@ -42,7 +42,7 @@
 
 	Sub Window_onLoad
 		' start from TotalCmd with right mouse double click causes error on "window.resizeTo" if timeout ~< 60
-		idTimer = window.setTimeout( "Main", 60, "VBScript")
+		idTimer = window.setTimeout("Main", 60, "VBScript")
 	End Sub
 
 	Sub Main
@@ -53,7 +53,7 @@
 		width = 800
 		height = 600
 
-		window.resizeTo width,height
+		window.resizeTo width, height
 		window.moveTo (screen.width - width) / 2, (screen.height - height) / 2
 
 		Set WshShell = CreateObject("WScript.Shell")
@@ -109,11 +109,11 @@
 			Set f = fso.OpenTextFile(DBFILE)
 			Do Until f.AtEndOfStream
 				s = f.ReadLine
-				If s <> "" And "#"<>Left(s,1) Then
+				If s <> "" And "#" <> Left(s, 1) Then
 					Set a = regEx.Execute(s)
 					If 0 < a.Count Then
 						' добавляем без кавычек
-						i = Replace(a(0).SubMatches(0),"""","")
+						i = Replace(a(0).SubMatches(0), """", "")
 						M.Add i, modPrefix & i
 						Deps.Add i, a(0).SubMatches(1)
 						Opts.Add i, a(0).SubMatches(2)
@@ -131,13 +131,13 @@
 			Do Until f.AtEndOfStream
 				s = f.ReadLine
 				a = f.ReadLine
-				For Each i In Array("","!Workshop\")
+				For Each i In Array("", "!Workshop\")
 					If fso.FolderExists(i & a) Then
 						If M.Exists(s) Then
 							M(s) = i & a
 						Else
 							M.Add s, i & a
-							Opts.Add s,"dont_show"
+							Opts.Add s, "dont_show"
 						End If
 						'msgbox s&"="&M(s)
 						Exit For
@@ -156,7 +156,7 @@
 		HTMLTable = "<table align='center' border=0 cellspacing=5 cellpadding=0 style='padding-left:5;padding-right:5'>"
 		a = 1	' значение "Num" каждого видимого мода
 		For Each i In M.Keys
-			If Not ModHasOption(i,"with:") And Not ModHasOption(i,"dont_show") Then
+			If Not ModHasOption(i, "with:") And Not ModHasOption(i, "dont_show") Then
 				Visible.Add i, a
 				a = a * 2
 				' в таблице чекбоксы имеют id = имени мода, например:
@@ -174,7 +174,7 @@
 		ModsTable.InnerHTML = HTMLTable
 		' пройдемся по модам в таблице в поисках дефолтно-отмечаемых
 		For Each i In Visible.Keys
-			If Not ModHasOption(i,"not_default") Then
+			If Not ModHasOption(i, "not_default") Then
 				ModCheck(i)
 			End If
 		Next
@@ -185,23 +185,23 @@
 
 		Set Options = CreateObject("Scripting.Dictionary")
 		' значение: регулярка, дефолтное значение, является ли аргументом для arma
-		Options.Add "startBefore", Array(".*","",false)
-		Options.Add "cpuCount", Array("[0-8]","0",true)
-		'Options.Add "exThreads", Array("0|1|3|5|7","0",true)
-		'Options.Add "maxMem", Array("0|768|1024|2047|4096|8192|16384|32768","0",true)
-		Options.Add "Priority", Array("0|-?[12]","0",false)
-		Options.Add "showScriptErrors", Array("[01]","0",true)
-		Options.Add "nologs", Array("[01]","1",true)
+		Options.Add "startBefore", Array(".*", "", false)
+		Options.Add "cpuCount", Array("[0-8]", "0", true)
+		'Options.Add "exThreads", Array("0|1|3|5|7", "0", true)
+		'Options.Add "maxMem", Array("0|768|1024|2047|4096|8192|16384|32768", "0", true)
+		Options.Add "Priority", Array("0|-?[12]", "0", false)
+		Options.Add "showScriptErrors", Array("[01]", "0", true)
+		Options.Add "nologs", Array("[01]", "1", true)
 		If "AMD64" = WshShell.ExpandEnvironmentStrings("%PROCESSOR_ARCHITEW6432%") Then
-			s="1"
+			s = "1"
 		Else
-			s="0"
+			s = "0"
 		End If
-		Options.Add "x64", Array("[01]",s,false)
-		Options.Add "filePatching", Array("[01]","0",true)
+		Options.Add "x64", Array("[01]", s, false)
+		Options.Add "filePatching", Array("[01]", "0", true)
 
 		For Each s In Options.Keys
-			Call SetHTMLValue(s,Options(s)(1))
+			Call SetHTMLValue(s, Options(s)(1))
 		Next
 		LoadOptions
 
@@ -243,7 +243,7 @@
 		If fso.FileExists(modPrefix & "last") Then
 			If HTTP_last.responseText = fso.OpenTextFile(modPrefix & "last").ReadAll Then
 				idUpdate.value = "No updates :)"
-				idUpdate.title = "HTTP_last.responseText=" & Left(HTTP_last.responseText,30)
+				idUpdate.title = "HTTP_last.responseText=" & Left(HTTP_last.responseText, 30)
 				Exit Sub
 			End If
 		End If
@@ -265,11 +265,11 @@
 		window.setTimeout "UpdateBlink", time, "VBScript"
 	End Sub
 
-	Function ModHasOption(mo,opt)
+	Function ModHasOption(mo, opt)
 		' возвращает, есть ли у данного мода данная опция
 		Dim ret
 		'  dont_show  only_required  not_default  with:aaa,ddd,fff
-		If InStr(1,Opts(mo),opt,vbTextCompare) Then
+		If InStr(1, Opts(mo), opt, vbTextCompare) Then
 			ret = True
 		Else
 			ret = False
@@ -277,11 +277,11 @@
 		ModHasOption = ret
 	End Function
 
-	Function IsModInList(list,strMod)
+	Function IsModInList(list, strMod)
 		' возвращает, находится ли в данном списке модов данный мод
 		Dim ret, s
 		ret = False
-		For Each s In Split(list,";")
+		For Each s In Split(list, ";")
 			If s = strMod Then
 				ret = True
 				Exit For
@@ -309,7 +309,7 @@
 		If (CLng(Visible(mo)) And CLng(ModSum.value)) = 0 Then ModSum.value = CLng(ModSum.value) + CLng(Visible(mo))
 		' включим все требуемые моды
 		For Each i In Visible.Keys
-			If IsModInList(Deps(mo),i) And Not Checked.Exists(i) Then ModCheck(i)
+			If IsModInList(Deps(mo), i) And Not Checked.Exists(i) Then ModCheck(i)
 		Next
 	End Sub
 
@@ -323,7 +323,7 @@
 		If (CLng(Visible(mo)) And CLng(ModSum.value)) > 0 Then ModSum.value = CLng(ModSum.value) - CLng(Visible(mo))
 		' выключим все зависимые моды
 		For Each i In Visible.Keys
-			If IsModInList(Deps(i),mo) And Checked.Exists(i) Then ModUnCheck(i)
+			If IsModInList(Deps(i), mo) And Checked.Exists(i) Then ModUnCheck(i)
 		Next
 	End Sub
 
@@ -337,7 +337,7 @@
 		Else
 			window.clearTimeout(idTimer)
 		End If
-		idTimer = window.setTimeout( "ModSum_Change", 1000, "VBScript")
+		idTimer = window.setTimeout("ModSum_Change", 1000, "VBScript")
 	End Sub
 
 	Sub ModSum_Change
@@ -349,7 +349,7 @@
 		' если новое значение не цифры, просто вернем старое
 		If Not regEx.Test(ModSum.value) Then
 			ModSum.value = oldModSum
-		ElseIf CLng(oldModSum)<>CLng(ModSum.value) Then
+		ElseIf CLng(oldModSum) <> CLng(ModSum.value) Then
 			'проходимся по модам в таблице, если надо отметить - отм., надо снять - снять
 			For Each i In Visible.Keys
 				'используем побитовое И
@@ -367,7 +367,7 @@
 
 	Sub AddModToString(path)
 		' проверяет, существует ли каталог мода, и добавляет его к строке модов
-		If IsModInList(strMods,path) Then Exit Sub
+		If IsModInList(strMods, path) Then Exit Sub
 		If Not fso.FolderExists(path) Then msgbox path & " added, but folder not found"
 		strMods = strMods & ";" & path
 	End Sub
@@ -381,10 +381,10 @@
 			Exit Sub
 		End If
 		' если мод в базе, вызовем рекурсию для всех зависимостей и добавим его самого
-		For Each dep In Split(Deps(mo),";")
+		For Each dep In Split(Deps(mo), ";")
 			AddModAndDepsToString(dep)
 		Next
-		If Not ModHasOption(mo,"only_required") Then AddModToString(M(mo))
+		If Not ModHasOption(mo, "only_required") Then AddModToString(M(mo))
 	End Sub
 
 	Sub AddModsWith_with
@@ -394,14 +394,14 @@
 		Do While modAdded ' и пока моды будут добавляться, мы будем проходить по всем модам с with заново
 			modAdded = False
 			For Each mo In M.Keys
-				If ModHasOption(mo,"with:") And Not IsModInList(strMods,M(mo)) Then
+				If ModHasOption(mo, "with:") And Not IsModInList(strMods, M(mo)) Then
 					' уберем впереди стоящую "with:"
-					withList = Split(Opts(mo),":")(1)
+					withList = Split(Opts(mo), ":")(1)
 					modAdded = True
-					For Each withMod In Split(withList,",")
+					For Each withMod In Split(withList, ",")
 						' если мод в базе, проверяем реальное имя, иначе текущее
 						If M.Exists(withMod) Then
-							If Not IsModInList(strMods,M(withMod)) Then
+							If Not IsModInList(strMods, M(withMod)) Then
 								modAdded = False
 								Exit For
 							End If
@@ -431,7 +431,7 @@
 		isStarting = True
 		Dim s, i, StartPriorities
 		' параметры для команды start
-		StartPriorities = Array("low","belownormal","normal","abovenormal","high")
+		StartPriorities = Array("low", "belownormal", "normal", "abovenormal", "high")
 
 		If "String" = TypeName(isServer) Then
 			msgbox "exe not found"
@@ -469,13 +469,13 @@
 		' сначала пройдемся по всем отмеченным модам
 		For Each i In M.Keys
 			If Checked.Exists(i) Then AddModAndDepsToString(i)
-			If ( i = "@pooter_enhanced_asr_ai" Or i = "@Vcom_AI" ) And Checked.Exists(i) Then strEXE = strEXE & " -filePatching"
+			If (i = "@pooter_enhanced_asr_ai" Or i = "@Vcom_AI") And Checked.Exists(i) Then strEXE = strEXE & " -filePatching"
 		Next
 		' потом по модам с опцией with:
 		AddModsWith_with
 		strEXE = strEXE & GetOptionsString
 		' моды в кавычки на случай пробелов
-		If ";" = Left(strMods,1) Then strMods = " ""-mod=" & Mid(strMods,2) & """"
+		If ";" = Left(strMods, 1) Then strMods = " ""-mod=" & Mid(strMods, 2) & """"
 
 		ModSum.ReadOnly = True
 		idStartButton.Disabled = True
@@ -487,12 +487,12 @@
 				End If
 			End If
 			window.clearTimeout(cacheTimer)
-			cacheTimer = window.setTimeout( "CheckCache", 3*60*1000, "VBScript")
+			cacheTimer = window.setTimeout("CheckCache", 3*60*1000, "VBScript")
 		End If
 		If "" <> GetHTMLValue("startBefore") Then WshShell.Run GetHTMLValue("startBefore"), , True
 		'msgbox strEXE & strMods & extArgs
 		WshShell.Run strEXE & strMods & extArgs, , True
-		idTimer = window.setTimeout( "Launch_finished", 10000, "VBScript")
+		idTimer = window.setTimeout("Launch_finished", 10000, "VBScript")
 		'Launch_finished
 		'myQuit
 	End Sub
@@ -516,7 +516,7 @@
 		If isServer Then
 			If HTTP_code.responseText <> ModSum.value Then
 				code_status.InnerHTML = "ER"
-				code_status.title = "HTTP_code.responseText=" & Left(HTTP_code.responseText,30)
+				code_status.title = "HTTP_code.responseText=" & Left(HTTP_code.responseText, 30)
 				Exit Sub
 			End If
 			code_status.title = "Code " & ModSum.value & " uploaded"
@@ -525,7 +525,7 @@
 				oldModSum = ModSum.value
 				idStartButton.Disabled = True
 			End If
-			ModSum.value = Left(HTTP_code.responseText,9)
+			ModSum.value = Left(HTTP_code.responseText, 9)
 			code_status.title = "server code = " & ModSum.value
 			ModSum_Change
 		End If
@@ -565,7 +565,7 @@
 		GetHTMLValue = ret
 	End Function
 
-	Sub SetHTMLValue(id,val)
+	Sub SetHTMLValue(id, val)
 		' устанавливает для данного элемента данное значение (в т.ч. checkbox)
 		If "checkbox" <> document.getElementById(id).type Then
 			document.getElementById(id).value = val
@@ -597,7 +597,7 @@
 	Sub SaveOnClick
 		' при нажатии кнопки "Сохранить"
 		Dim opt
-		Set f = fso.CreateTextFile(optionsFile,True)
+		Set f = fso.CreateTextFile(optionsFile, True)
 		f.WriteLine("[User]")
 		For Each opt In Options.Keys
 			f.WriteLine(opt & "=" & GetHTMLValue(opt))
@@ -612,14 +612,14 @@
 		Set f = fso.OpenTextFile(optionsFile)
 		Do Until f.AtEndOfStream
 			s = f.ReadLine
-			a = Split(s,"=")
+			a = Split(s, "=")
 			If 1 = UBound(a) Then
 				If Options.Exists(a(0)) Then
 					regEx.Pattern = Options(a(0))(0)
 					If regEx.Test(a(1)) Then
-						Call SetHTMLValue(a(0),a(1))
+						Call SetHTMLValue(a(0), a(1))
 					Else
-						Call SetHTMLValue(a(0),Options(a(0))(1))
+						Call SetHTMLValue(a(0), Options(a(0))(1))
 					End If
 				End If
 			End If
