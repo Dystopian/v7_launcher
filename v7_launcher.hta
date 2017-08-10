@@ -38,6 +38,7 @@
 	Const URL_code_set = ""
 	Const URL_last_get = ""
 	Const AdminComputerName = "ADMIN"
+	Dim extArgs ' аргументы, переданные ланчеру, передадим в игру
 
 	Sub Window_onLoad
 		' start from TotalCmd with right mouse double click causes error on "window.resizeTo" if timeout ~< 60
@@ -216,8 +217,10 @@
 			End If
 		End If
 
-		args = Split(v7_ArmA_LauncherID.commandLine)
-		If "start" = args(Ubound(args)) Then
+		extArgs = Mid(v7_ArmA_LauncherID.commandLine, 1 + InStr(2, v7_ArmA_LauncherID.commandLine, """", vbBinaryCompare))
+		regEx.Pattern = "^\s+start"
+		If regEx.Test(extArgs) Then
+			extArgs = regEx.Replace(extArgs, "")
 			Launch
 		End If
 
@@ -487,9 +490,8 @@
 			cacheTimer = window.setTimeout( "CheckCache", 3*60*1000, "VBScript")
 		End If
 		If "" <> GetHTMLValue("startBefore") Then WshShell.Run GetHTMLValue("startBefore"), , True
-		'msgbox strEXE & strMods
-		'If subFolderMode Then msgbox strMods
-		WshShell.Run strEXE & strMods, , True
+		'msgbox strEXE & strMods & extArgs
+		WshShell.Run strEXE & strMods & extArgs, , True
 		idTimer = window.setTimeout( "Launch_finished", 10000, "VBScript")
 		'Launch_finished
 		'myQuit
