@@ -19,7 +19,7 @@
 	' глобальные переменные
 	Dim DBFILE ' файл с описаниями модов
 	Dim optionsFile ' файл с настройками
-	Dim M, Deps, Opts, Desc, Visible, Checked ' БД модов
+	Dim Mods, EMods, Deps, Opts, Desc, Visible, Checked ' БД модов
 	Dim WshShell, fso, f ' дескриптор файла
 	Dim strEXE, strMods ' строки запуска гамы
 	Dim regEx ' регулярка, которой будем проверять че-нибудь
@@ -39,6 +39,7 @@
 	Const URL_last_get = ""
 	Const AdminComputerName = "ADMIN"
 	Dim extArgs ' аргументы, переданные ланчеру, передадим в игру
+	Dim is64 ' true если винда 64-битная
 
 	Sub Window_onLoad
 		' start from TotalCmd with right mouse double click causes error on "window.resizeTo" if timeout ~< 60
@@ -63,6 +64,7 @@
 		Set HTTP_last = CreateObject("MSXML2.XMLHTTP.3.0")
 		isStarting = False
 		oldModSum = ""
+		is64 = "AMD64" = WshShell.ExpandEnvironmentStrings("%PROCESSOR_ARCHITEW6432%")
 
 		DBFILE = "descript.ion"
 		GoToScriptDirectory
@@ -93,7 +95,8 @@
 		optionsFile = WshShell.ExpandEnvironmentStrings("%APPDATA%") & "\v7ArmALauncher.ini"
 
 			' ключом для всех этих БД является имя мода
-		Set M = CreateObject("Scripting.Dictionary") ' имя мода (каталог, если в корне игры, и полный/относительный путь, в ином случае)
+		Set Mods = CreateObject("Scripting.Dictionary") ' имя мода (каталог, если в корне игры, и полный/относительный путь, в ином случае)
+		Set EMods = CreateObject("Scripting.Dictionary") ' тоже, но с опцией if_exist
 		Set Deps = CreateObject("Scripting.Dictionary") ' список требуемых модов
 		Set Opts = CreateObject("Scripting.Dictionary")' список опций
 		Set Desc = CreateObject("Scripting.Dictionary") ' описание
@@ -108,22 +111,30 @@
 			regEx.Pattern = "(""[^""]+""|[^ ]+) (?:\{([^\}]*)\})? *(?:\[([^\]]*)\])? *(.*)?"
 			Set f = fso.OpenTextFile(DBFILE)
 			Do Until f.AtEndOfStream
-				s = f.ReadLine
+				s = LTrim(f.ReadLine)
 				If s <> "" And "#" <> Left(s, 1) Then
 					Set a = regEx.Execute(s)
 					If 0 < a.Count Then
 						' добавляем без кавычек
 						i = Replace(a(0).SubMatches(0), """", "")
-						M.Add i, modPrefix & i
 						Deps.Add i, a(0).SubMatches(1)
 						Opts.Add i, a(0).SubMatches(2)
 						Desc.Add i, a(0).SubMatches(3)
+						If Not ModHasOption(i, "if_exist") Then
+							Mods.Add i, modPrefix & i
+						Else
+							EMods.Add i, modPrefix & i
+						End If
 					Else
 						msgbox """" & s & """ no regex"
 					End If
 				End If
 			Loop
 			f.Close
+			' добавляем EMods в конец Mods
+			For Each i In EMods.Keys
+				Mods.Add i, EMods(i)
+			Next
 		End If
 
 		If subFolderMode And fso.FileExists(modPrefix & "found_addons.txt") Then
@@ -133,19 +144,23 @@
 				a = f.ReadLine
 				For Each i In Array("", "!Workshop\")
 					If fso.FolderExists(i & a) Then
-						If M.Exists(s) Then
-							M(s) = i & a
+						If Mods.Exists(s) Then
+							Mods(s) = i & a
 						Else
-							M.Add s, i & a
+							Mods.Add s, i & a
 							Opts.Add s, "dont_show"
 						End If
-						'msgbox s&"="&M(s)
 						Exit For
 					End If
 				Next
 			Loop
 			f.Close
 		End If
+
+		' удаляем несуществующие EMods из Mods
+		For Each i In EMods.Keys
+			If Not ModExists(i) Then Mods.Remove i
+		Next
 
 		Dim Colors(2), currentColor ' цвета чередующихся строк таблицы
 		' infobackground silver lightskyblue bisque  cornsilk lightcyan
@@ -155,15 +170,20 @@
 		Dim HTMLTable ' исх. текст таблицы модов
 		HTMLTable = "<table align='center' border=0 cellspacing=5 cellpadding=0 style='padding-left:5;padding-right:5'>"
 		a = 1	' значение "Num" каждого видимого мода
-		For Each i In M.Keys
+		For Each i In Mods.Keys
 			If Not ModHasOption(i, "with:") And Not ModHasOption(i, "dont_show") Then
 				Visible.Add i, a
 				a = a * 2
+				If EMods.Exists(i) Then
+					s = "* " ' пометим звездой моды с опцией if_exist
+				Else
+					s = ""
+				End If
 				' в таблице чекбоксы имеют id = имени мода, например:
 				'<label for='_new'><tr bgcolor='cyan'><td><input id='_new' type='checkbox' onclick='ModOnClick'>new</td><td>Descr</td></tr></label>
 				HTMLTable = HTMLTable & _
 					"<label for='" & i & "'><tr bgcolor='"& Colors(currentColor) & "'>" & _
-					"<td><input id='" & i & "' type='checkbox' onclick='ModOnClick'>" & i & "</td>" & _
+					"<td><input id='" & i & "' type='checkbox' onclick='ModOnClick'>" & s & i & "</td>" & _
 					"<td>" & Desc(i) & "</td>" & _
 					"<td>" & Visible(i) & "</td>" & _
 					"</tr></label>"
@@ -174,7 +194,7 @@
 		ModsTable.InnerHTML = HTMLTable
 		' пройдемся по модам в таблице в поисках дефолтно-отмечаемых
 		For Each i In Visible.Keys
-			If Not ModHasOption(i, "not_default") Then
+			If Not ModHasOption(i, "not_default") And Not ModHasOption(i, "if_exist") Then
 				ModCheck(i)
 			End If
 		Next
@@ -192,7 +212,7 @@
 		Options.Add "Priority", Array("0|-?[12]", "0", false)
 		Options.Add "showScriptErrors", Array("[01]", "0", true)
 		Options.Add "nologs", Array("[01]", "1", true)
-		If "AMD64" = WshShell.ExpandEnvironmentStrings("%PROCESSOR_ARCHITEW6432%") Then
+		If is64 Then
 			s = "1"
 		Else
 			s = "0"
@@ -265,10 +285,35 @@
 		window.setTimeout "UpdateBlink", time, "VBScript"
 	End Sub
 
+	Function ModExists(mo)
+		' проверяет существование мода с опцией if_exist или его зависимости (рекурсивно)
+		Dim ret, dep
+		If Not Mods.Exists(mo) Then
+			If fso.FolderExists(modPrefix & mo) Then
+				ret = True
+			Else
+				ret = False
+			End If
+		Else
+			If Not ModHasOption(mo, "only_required") Then
+				ret = fso.FolderExists(Mods(mo))
+			Else
+				ret = True
+				For Each dep In Split(Deps(mo), ";")
+					If Not ModExists(dep) Then
+						ret = False
+						Exit For
+					End If
+				Next
+			End If
+		End If
+		ModExists = ret
+	End Function
+
 	Function ModHasOption(mo, opt)
 		' возвращает, есть ли у данного мода данная опция
 		Dim ret
-		'  dont_show  only_required  not_default  with:aaa,ddd,fff
+		'  dont_show  only_required  not_default  with:aaa,ddd,fff  if_exist
 		If InStr(1, Opts(mo), opt, vbTextCompare) Then
 			ret = True
 		Else
@@ -375,7 +420,7 @@
 	Sub AddModAndDepsToString(mo)
 		' добавляет в строку strMods данный мод и, если есть, его зависимости (рекурсивно)
 		Dim dep
-		If Not M.Exists(mo) Then
+		If Not Mods.Exists(mo) Then
 			' если мода в базе нет, просто добавим его
 			AddModToString(modPrefix & mo)
 			Exit Sub
@@ -384,7 +429,7 @@
 		For Each dep In Split(Deps(mo), ";")
 			AddModAndDepsToString(dep)
 		Next
-		If Not ModHasOption(mo, "only_required") Then AddModToString(M(mo))
+		If Not ModHasOption(mo, "only_required") Then AddModToString(Mods(mo))
 	End Sub
 
 	Sub AddModsWith_with
@@ -393,15 +438,15 @@
 		modAdded = True ' переменная показывает, произошло ли добавление текущего мода к списку
 		Do While modAdded ' и пока моды будут добавляться, мы будем проходить по всем модам с with заново
 			modAdded = False
-			For Each mo In M.Keys
-				If ModHasOption(mo, "with:") And Not IsModInList(strMods, M(mo)) Then
+			For Each mo In Mods.Keys
+				If ModHasOption(mo, "with:") And Not IsModInList(strMods, Mods(mo)) Then
 					' уберем впереди стоящую "with:"
 					withList = Split(Opts(mo), ":")(1)
 					modAdded = True
 					For Each withMod In Split(withList, ",")
 						' если мод в базе, проверяем реальное имя, иначе текущее
-						If M.Exists(withMod) Then
-							If Not IsModInList(strMods, M(withMod)) Then
+						If Mods.Exists(withMod) Then
+							If Not IsModInList(strMods, Mods(withMod)) Then
 								modAdded = False
 								Exit For
 							End If
@@ -429,6 +474,9 @@
 			Exit Sub
 		End If
 		isStarting = True
+		idStartButton.Disabled = True
+		ModSum.ReadOnly = True
+
 		Dim s, i, StartPriorities
 		' параметры для команды start
 		StartPriorities = Array("low", "belownormal", "normal", "abovenormal", "high")
@@ -436,6 +484,37 @@
 		If "String" = TypeName(isServer) Then
 			msgbox "exe not found"
 			myQuit
+		End If
+
+		' personal user tasks
+		If "DAD" = WshShell.ExpandEnvironmentStrings("%ComputerName%") Then MsgBox "Звук переключи"
+
+		If "DEEP1" = WshShell.ExpandEnvironmentStrings("%ComputerName%") Then
+			If fso.FileExists(cacheFilePath & ModSum.value & "\a.dat") Then
+				If fso.GetFile(cacheFilePath & cacheFileName).DateLastModified <> fso.GetFile(cacheFilePath & ModSum.value & "\a.dat").DateLastModified Then
+					fso.CopyFile cacheFilePath & ModSum.value & "\a.dat", cacheFilePath & cacheFileName, True
+				End If
+			End If
+			window.clearTimeout(cacheTimer)
+			cacheTimer = window.setTimeout("CheckCache", 3*60*1000, "VBScript")
+		End If
+
+		' check if arma path is correct
+		If Not isServer Then
+			s = ""
+			On Error Resume Next
+			s = WshShell.RegRead("HKLM\SOFTWARE\bohemia interactive\arma 3\main")
+			On Error Goto 0
+			If s = "" Then
+				msgbox "reg key not found"
+			Else
+				If LCase(s) <> LCase(WshShell.CurrentDirectory) Then
+					msgbox "Wrong path!" & _
+						vbNewLine & "Registry path: " & s & _
+						vbNewLine & "Current path: " & WshShell.CurrentDirectory & _
+						vbNewLine & vbNewLine & vbNewLine & "Press Ctrl+C to copy this message"
+				End If
+			End If
 		End If
 
 		If 0 = GetHTMLValue("x64") Then
@@ -465,30 +544,18 @@
 		strEXE = strEXE & " -nosplash -world=empty -skipIntro -noPause"
 		strEXE = "cmd /c start """" /" & StartPriorities(2+CInt(GetHTMLValue("Priority"))) & " " & strEXE
 		strMods = ""
-		If fso.FolderExists("R:\@_RAM") Then strMods = ";" & "R:\@_RAM" & strMods
 		' сначала пройдемся по всем отмеченным модам
-		For Each i In M.Keys
+		For Each i In Mods.Keys
 			If Checked.Exists(i) Then AddModAndDepsToString(i)
 			If (i = "@pooter_enhanced_asr_ai" Or i = "@Vcom_AI") And Checked.Exists(i) Then strEXE = strEXE & " -filePatching"
 		Next
 		' потом по модам с опцией with:
 		AddModsWith_with
+		If fso.FolderExists("R:\@_RAM") Then strMods = strMods & ";" & "R:\@_RAM"
 		strEXE = strEXE & GetOptionsString
 		' моды в кавычки на случай пробелов
 		If ";" = Left(strMods, 1) Then strMods = " ""-mod=" & Mid(strMods, 2) & """"
 
-		ModSum.ReadOnly = True
-		idStartButton.Disabled = True
-		If "DAD" = WshShell.ExpandEnvironmentStrings("%ComputerName%") Then MsgBox "Звук переключи"
-		If "DEEP" = WshShell.ExpandEnvironmentStrings("%ComputerName%") Then
-			If fso.FileExists(cacheFilePath & ModSum.value & "\a.dat") Then
-				If fso.GetFile(cacheFilePath & cacheFileName).DateLastModified <> fso.GetFile(cacheFilePath & ModSum.value & "\a.dat").DateLastModified Then
-					fso.CopyFile cacheFilePath & ModSum.value & "\a.dat", cacheFilePath & cacheFileName, True
-				End If
-			End If
-			window.clearTimeout(cacheTimer)
-			cacheTimer = window.setTimeout("CheckCache", 3*60*1000, "VBScript")
-		End If
 		If "" <> GetHTMLValue("startBefore") Then WshShell.Run GetHTMLValue("startBefore"), , True
 		'msgbox strEXE & strMods & extArgs
 		WshShell.Run strEXE & strMods & extArgs, , True
