@@ -29,9 +29,6 @@
 	Dim subFolderMode ' режим работы в подпапке
 	Dim modPrefix ' префикс модов для режима работы в подпапке
 	Dim Options ' опции в нижней части окна
-	Dim cacheFilePath ' путь к файлу с AnimDataCache и имя файла
-	Const cacheFileName = "6ff2c91729fc5490b726322f1f9577f672b80002.dat"
-	Dim cacheTimer ' id таймера для сохранения AnimDataCache
 	Dim isServer ' = true если сервер
 	Dim HTTP_code, HTTP_last ' объект открытия страниц в инете, для запроса/отправки кода и проверки надо ли обновляться
 	Const URL_code_get = ""
@@ -224,8 +221,6 @@
 			Call SetHTMLValue(s, Options(s)(1))
 		Next
 		LoadOptions
-
-		cacheFilePath = WshShell.ExpandEnvironmentStrings("%LOCALAPPDATA%") & "\Arma 3\AnimDataCache\"
 
 		If "String" <> TypeName(isServer) And "" <> URL_code_get Then
 			If Not isServer Then
@@ -486,17 +481,6 @@
 			myQuit
 		End If
 
-		' personal user tasks
-		If "DEEP1" = WshShell.ExpandEnvironmentStrings("%ComputerName%") Then
-			If fso.FileExists(cacheFilePath & ModSum.value & "\a.dat") Then
-				If fso.GetFile(cacheFilePath & cacheFileName).DateLastModified <> fso.GetFile(cacheFilePath & ModSum.value & "\a.dat").DateLastModified Then
-					fso.CopyFile cacheFilePath & ModSum.value & "\a.dat", cacheFilePath & cacheFileName, True
-				End If
-			End If
-			window.clearTimeout(cacheTimer)
-			cacheTimer = window.setTimeout("CheckCache", 3*60*1000, "VBScript")
-		End If
-
 		' check if arma path is correct
 		If Not isServer Then
 			s = ""
@@ -609,18 +593,6 @@
 		If window.event.Keycode = 27 Then myQuit
 		If window.event.Keycode = 13 And Not idStartButton.Disabled And "idStartButton" <> window.event.srcElement.id Then Launch
 	End Sub
-
-	Sub CheckCache
-		' если изменился файл в AnimDataCache, сохраняет его
-		window.clearTimeout(cacheTimer)
-		If Not fso.FolderExists(cacheFilePath & ModSum.value) Then fso.CreateFolder cacheFilePath & ModSum.value
-		If Not fso.FileExists(cacheFilePath & ModSum.value & "\a.dat") Then
-			fso.CopyFile cacheFilePath & cacheFileName, cacheFilePath & ModSum.value & "\a.dat"
-		ElseIf fso.GetFile(cacheFilePath & cacheFileName).DateLastModified <> fso.GetFile(cacheFilePath & ModSum.value & "\a.dat").DateLastModified Then
-			fso.CopyFile cacheFilePath & cacheFileName, cacheFilePath & ModSum.value & "\a.dat", True
-		End If
-	End Sub
-
 
 	Function GetHTMLValue(id)
 		' возвращает значение данного элемента (в т.ч. checkbox)
