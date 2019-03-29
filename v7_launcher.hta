@@ -1,6 +1,7 @@
 <html>
 <head>
 <title>v7 ArmA Launcher 3.3</title>
+<!-- !!! ID is used in code !!! -->
 <HTA:APPLICATION
 	ID="v7_ArmA_LauncherID"
 	applicationName="ArmA Launcher"
@@ -117,10 +118,10 @@
 						Deps.Add i, a(0).SubMatches(1)
 						Opts.Add i, a(0).SubMatches(2)
 						Desc.Add i, a(0).SubMatches(3)
-						If Not ModHasOption(i, "if_exist") Then
-							Mods.Add i, modPrefix & i
-						Else
+						If ModHasOption(i, "if_exist") Then
 							EMods.Add i, modPrefix & i
+						Else
+							Mods.Add i, modPrefix & i
 						End If
 					Else
 						msgbox """" & s & """ no regex"
@@ -280,21 +281,17 @@
 		window.setTimeout "UpdateBlink", time, "VBScript"
 	End Sub
 
-	Function ModExists(mo)
+	Function ModExists(m)
 		' провер€ет существование мода с опцией if_exist или его зависимости (рекурсивно)
 		Dim ret, dep
-		If Not Mods.Exists(mo) Then
-			If fso.FolderExists(modPrefix & mo) Then
-				ret = True
-			Else
-				ret = False
-			End If
+		If Not Mods.Exists(m) Then
+			ret = fso.FolderExists(modPrefix & m)
 		Else
-			If Not ModHasOption(mo, "only_required") Then
-				ret = fso.FolderExists(Mods(mo))
+			If Not ModHasOption(m, "only_required") Then
+				ret = fso.FolderExists(Mods(m))
 			Else
 				ret = True
-				For Each dep In Split(Deps(mo), ";")
+				For Each dep In Split(Deps(m), ";")
 					If Not ModExists(dep) Then
 						ret = False
 						Exit For
@@ -305,11 +302,11 @@
 		ModExists = ret
 	End Function
 
-	Function ModHasOption(mo, opt)
+	Function ModHasOption(m, opt)
 		' возвращает, есть ли у данного мода данна€ опци€
 		Dim ret
 		'  dont_show  only_required  not_default  with:aaa,ddd,fff  if_exist
-		If InStr(1, Opts(mo), opt, vbTextCompare) Then
+		If InStr(1, Opts(m), opt, vbTextCompare) Then
 			ret = True
 		Else
 			ret = False
@@ -339,31 +336,31 @@
 		End If
 	End Sub
 
-	Sub ModCheck(mo)
+	Sub ModCheck(m)
 		' отмечает текущий мод, как выбранный, а также все ему требуемые
 		Dim i
-		If Not Checked.Exists(mo) Then Checked.Add mo, Null
-		document.getElementById(mo).checked = True
+		If Not Checked.Exists(m) Then Checked.Add m, Null
+		document.getElementById(m).checked = True
 		' мен€ть значение суммы будем только, если текущий мод в нее не включен
 		'используем побитовое »
-		If (CLng(Visible(mo)) And CLng(ModSum.value)) = 0 Then ModSum.value = CLng(ModSum.value) + CLng(Visible(mo))
+		If (CLng(Visible(m)) And CLng(ModSum.value)) = 0 Then ModSum.value = CLng(ModSum.value) + CLng(Visible(m))
 		' включим все требуемые моды
 		For Each i In Visible.Keys
-			If IsModInList(Deps(mo), i) And Not Checked.Exists(i) Then ModCheck(i)
+			If IsModInList(Deps(m), i) And Not Checked.Exists(i) Then ModCheck(i)
 		Next
 	End Sub
 
-	Sub ModUnCheck(mo)
+	Sub ModUnCheck(m)
 		' снимает с текущего мода отметку выбранности. » заодно со всех модов, которые требуют его
 		Dim i
-		If Checked.Exists(mo) Then Checked.Remove mo
-		document.getElementById(mo).checked = False
+		If Checked.Exists(m) Then Checked.Remove m
+		document.getElementById(m).checked = False
 		' мен€ть значение суммы будем только, если текущий мод в нее включен
 		'используем побитовое »
-		If (CLng(Visible(mo)) And CLng(ModSum.value)) > 0 Then ModSum.value = CLng(ModSum.value) - CLng(Visible(mo))
+		If (CLng(Visible(m)) And CLng(ModSum.value)) > 0 Then ModSum.value = CLng(ModSum.value) - CLng(Visible(m))
 		' выключим все зависимые моды
 		For Each i In Visible.Keys
-			If IsModInList(Deps(i), mo) And Checked.Exists(i) Then ModUnCheck(i)
+			If IsModInList(Deps(i), m) And Checked.Exists(i) Then ModUnCheck(i)
 		Next
 	End Sub
 
@@ -412,31 +409,31 @@
 		strMods = strMods & ";" & path
 	End Sub
 
-	Sub AddModAndDepsToString(mo)
+	Sub AddModAndDepsToString(m)
 		' добавл€ет в строку strMods данный мод и, если есть, его зависимости (рекурсивно)
 		Dim dep
-		If Not Mods.Exists(mo) Then
+		If Not Mods.Exists(m) Then
 			' если мода в базе нет, просто добавим его
-			AddModToString(modPrefix & mo)
+			AddModToString(modPrefix & m)
 			Exit Sub
 		End If
 		' если мод в базе, вызовем рекурсию дл€ всех зависимостей и добавим его самого
-		For Each dep In Split(Deps(mo), ";")
+		For Each dep In Split(Deps(m), ";")
 			AddModAndDepsToString(dep)
 		Next
-		If Not ModHasOption(mo, "only_required") Then AddModToString(Mods(mo))
+		If Not ModHasOption(m, "only_required") Then AddModToString(Mods(m))
 	End Sub
 
 	Sub AddModsWith_with
 		' добавл€ет, если надо, в строку модов моды с опцией with
-		Dim mo, modAdded, withList, withMod
+		Dim m, modAdded, withList, withMod
 		modAdded = True ' переменна€ показывает, произошло ли добавление текущего мода к списку
 		Do While modAdded ' и пока моды будут добавл€тьс€, мы будем проходить по всем модам с with заново
 			modAdded = False
-			For Each mo In Mods.Keys
-				If ModHasOption(mo, "with:") And Not IsModInList(strMods, Mods(mo)) Then
+			For Each m In Mods.Keys
+				If ModHasOption(m, "with:") And Not IsModInList(strMods, Mods(m)) Then
 					' уберем впереди сто€щую "with:"
-					withList = Split(Opts(mo), ":")(1)
+					withList = Split(Opts(m), ":")(1)
 					modAdded = True
 					For Each withMod In Split(withList, ",")
 						' если мод в базе, провер€ем реальное им€, иначе текущее
@@ -452,7 +449,7 @@
 							End If
 						End If
 					Next
-					If modAdded Then AddModAndDepsToString(mo)
+					If modAdded Then AddModAndDepsToString(m)
 				End If
 			Next
 		Loop
@@ -696,7 +693,7 @@
 		' при нажатии кнопки "Update"
 		GoToScriptDirectory
 		WshShell.CurrentDirectory = WshShell.CurrentDirectory & "\cwRsync\"
-		WshShell.Run """" & "Download_from_inet.cmd" & """", , True
+		WshShell.Run """Download_from_inet.cmd"" launcher", , True
 	End Sub
 
 	Sub GoToScriptDirectory
