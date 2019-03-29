@@ -487,8 +487,6 @@
 		End If
 
 		' personal user tasks
-		If "DAD" = WshShell.ExpandEnvironmentStrings("%ComputerName%") Then MsgBox "Звук переключи"
-
 		If "DEEP1" = WshShell.ExpandEnvironmentStrings("%ComputerName%") Then
 			If fso.FileExists(cacheFilePath & ModSum.value & "\a.dat") Then
 				If fso.GetFile(cacheFilePath & cacheFileName).DateLastModified <> fso.GetFile(cacheFilePath & ModSum.value & "\a.dat").DateLastModified Then
@@ -556,7 +554,14 @@
 		' моды в кавычки на случай пробелов
 		If ";" = Left(strMods, 1) Then strMods = " ""-mod=" & Mid(strMods, 2) & """"
 
-		If "" <> GetHTMLValue("startBefore") Then WshShell.Run GetHTMLValue("startBefore"), , True
+		s = GetHTMLValue("startBefore")
+		If s <> "" Then
+			If LCase("msg ") = LCase(Left(s,4)) Then
+				MsgBox Mid(s,5)
+			Else
+				WshShell.Run s, , True
+			End If
+		End IF
 		'msgbox strEXE & strMods & extArgs
 		WshShell.Run strEXE & strMods & extArgs, , True
 		idTimer = window.setTimeout("Launch_finished", 10000, "VBScript")
